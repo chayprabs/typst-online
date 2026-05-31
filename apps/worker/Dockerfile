@@ -1,7 +1,7 @@
 FROM python:3.12-slim-bookworm AS base
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl ca-certificates fontconfig \
+    curl ca-certificates fontconfig xz-utils \
     fonts-linuxlibertine fonts-inter fonts-noto-core fonts-noto-cjk fonts-noto-color-emoji \
     && rm -rf /var/lib/apt/lists/*
 
