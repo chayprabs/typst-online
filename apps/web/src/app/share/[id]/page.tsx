@@ -49,7 +49,7 @@ export default function SharePage() {
           Fork to edit
         </button>
       </div>
-      <Playground />
+      <Playground readOnly />
     </>
   );
 }

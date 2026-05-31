@@ -26,7 +26,11 @@ app.add_middleware(
 
 @app.on_event("startup")
 def startup() -> None:
+    from .cleanup import cleanup_expired_artifacts, cleanup_expired_shares
+
     ensure_dirs()
+    cleanup_expired_artifacts()
+    cleanup_expired_shares()
 
 
 @app.get("/health")

@@ -17,6 +17,8 @@ export const metadata: Metadata = {
     "pdf",
     "document-rendering",
     "typst-editor",
+    "typst-universe",
+    "typst-templates",
     "live-preview",
     "web-editor",
     "online-editor",

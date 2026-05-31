@@ -82,6 +82,19 @@ def test_compile_pdf():
     assert len(data["outputs"]) >= 1
 
 
+def test_inline_import_not_allowed():
+    project = dict(SAMPLE_PROJECT)
+    project["packages"] = []
+    project["files"] = [
+        {
+            "path": "main.typ",
+            "content": '#import "@preview/fletcher:0.5.8"\n= Hi\n',
+        }
+    ]
+    r = client.post("/v1/compile", json={"project": project, "format": "pdf"})
+    assert r.status_code == 403
+
+
 def test_package_not_allowed():
     project = dict(SAMPLE_PROJECT)
     project["packages"] = [{"name": "@preview/evil", "version": "1.0.0"}]

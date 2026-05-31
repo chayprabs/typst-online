@@ -12,7 +12,7 @@ TEMPLATES: dict[str, dict] = {
 #set text(font: "Linux Libertine", size: 11pt)
 #align(center)[
   *Alex Morgan* \\
-  alex@example.com · github.com/alex
+  alex\@example.com · github.com/alex
 ]
 #v(1em)
 == Experience
@@ -38,7 +38,7 @@ TEMPLATES: dict[str, dict] = {
   gutter: 1em,
   [
     *Jordan Lee* \\
-    jordan@example.com
+    jordan\@example.com
     #v(1em)
     == Skills
     - Typst
@@ -103,17 +103,17 @@ Typst offers a modern alternative to LaTeX for technical documents.
             {
                 "path": "main.typ",
                 "content": '''#set page(margin: 1.5cm)
-#align(right)[Invoice #1234 · May 31, 2026]
+#align(right)[Invoice \#1234 · May 31, 2026]
 #v(1em)
 *Bill to:* Example Client \\
 *From:* TypstBox LLC
 #table(
   columns: (1fr, auto, auto),
   [*Item*, *Qty*, *Total*],
-  [Consulting, 10, $5000],
-  [Hosting, 1, $200],
+  ["Consulting", 10, "5000 USD"],
+  ["Hosting", 1, "200 USD"],
 )
-#align(right)[*Total: $5200*]
+#align(right)[*Total: 5200 USD*]
 ''',
             }
         ],

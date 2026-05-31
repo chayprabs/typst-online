@@ -3,6 +3,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import HTTPException
+from pydantic import ValidationError
 
 from .config import SHARES_DIR
 from .models import Project
@@ -25,12 +26,14 @@ def get_share(share_id: str) -> Project:
     path = SHARES_DIR / f"{share_id}.json"
     if not path.exists():
         raise HTTPException(status_code=404, detail="SHARE_NOT_FOUND")
-    data = json.loads(path.read_text(encoding="utf-8"))
-    return Project(**data)
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return Project(**data)
+    except (json.JSONDecodeError, ValidationError, TypeError) as exc:
+        raise HTTPException(status_code=404, detail="SHARE_NOT_FOUND") from exc
 
 
 def fork_share(share_id: str) -> Project:
     original = get_share(share_id)
     new_id = str(uuid.uuid4())
-    forked = original.model_copy(update={"id": new_id})
-    return forked
+    return original.model_copy(update={"id": new_id})

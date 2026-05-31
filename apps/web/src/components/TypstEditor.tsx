@@ -1,16 +1,30 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useEffect, useRef } from "react";
 import { useProjectStore } from "@/store/project-store";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
-export function TypstEditor() {
-  const { getActiveContent, setActiveContent, activeFile, diagnostics } = useProjectStore();
+interface TypstEditorProps {
+  readOnly?: boolean;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type MonacoEditorInstance = any;
+
+export function TypstEditor({ readOnly = false }: TypstEditorProps) {
+  const activeFile = useProjectStore((s) => s.activeFile);
+  const diagnostics = useProjectStore((s) => s.diagnostics);
+  const getActiveContent = useProjectStore((s) => s.getActiveContent);
+  const setActiveContent = useProjectStore((s) => s.setActiveContent);
+  const editorRef = useRef<MonacoEditorInstance | null>(null);
+  const monacoRef = useRef<MonacoEditorInstance | null>(null);
+
   const content = getActiveContent();
 
   const markers = diagnostics
-    .filter((d) => d.file === activeFile || d.file === "" || d.file.endsWith(activeFile))
+    .filter((d) => !d.file || d.file === activeFile || d.file.endsWith(activeFile))
     .map((d) => ({
       startLineNumber: d.line,
       startColumn: d.column,
@@ -20,15 +34,26 @@ export function TypstEditor() {
       severity: d.severity === "error" ? 8 : 4,
     }));
 
+  useEffect(() => {
+    const editor = editorRef.current;
+    const monaco = monacoRef.current;
+    if (!editor || !monaco) return;
+    const model = editor.getModel();
+    if (model) {
+      monaco.editor.setModelMarkers(model, "typst", markers);
+    }
+  }, [markers, activeFile]);
+
   return (
     <div className="h-full min-h-[320px] flex-1 border-r border-[var(--border)]">
       <MonacoEditor
         height="100%"
-        language="plaintext"
+        language="markdown"
         theme="vs"
         value={content}
-        onChange={(v) => setActiveContent(v ?? "")}
+        onChange={(v) => !readOnly && setActiveContent(v ?? "")}
         options={{
+          readOnly,
           minimap: { enabled: false },
           fontSize: 14,
           lineNumbers: "on",
@@ -37,7 +62,12 @@ export function TypstEditor() {
           automaticLayout: true,
         }}
         onMount={(editor, monaco) => {
-          monaco.editor.setModelMarkers(editor.getModel()!, "typst", markers);
+          editorRef.current = editor;
+          monacoRef.current = monaco;
+          const model = editor.getModel();
+          if (model) {
+            monaco.editor.setModelMarkers(model, "typst", markers);
+          }
         }}
       />
     </div>
