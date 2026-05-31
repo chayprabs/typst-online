@@ -16,7 +16,7 @@
     "@typstbox/shared-types": "workspace:*",
     "lucide-react": "^0.511.0",
     "next": "^15.3.2",
-    "pdfjs-dist": "^4.10.38",
+    "pdfjs-dist": "^6.0.227",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "zustand": "^5.0.5"
