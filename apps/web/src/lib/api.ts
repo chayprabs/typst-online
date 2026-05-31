@@ -41,6 +41,10 @@ export async function getVersions() {
   );
 }
 
+export async function getFonts() {
+  return fetchJson<{ fonts: string[] }>("/v1/fonts");
+}
+
 export async function getPackages() {
   return fetchJson<{
     packages: { name: string; versions: string[]; description: string }[];

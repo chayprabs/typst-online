@@ -4,6 +4,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const base = "https://typstbox.dev";
   const routes = [
     "",
+    "/faq",
     "/privacy",
     "/terms",
     "/typst-playground",
@@ -11,6 +12,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/typst-invoice",
     "/typst-paper",
     "/typst-to-pdf",
+    "/t/resume-modern",
+    "/t/paper-ieee",
+    "/t/invoice",
   ];
   return routes.map((path) => ({
     url: `${base}${path}`,

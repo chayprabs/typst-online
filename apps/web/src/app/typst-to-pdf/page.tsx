@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Typst to PDF Online — TypstBox",
+  description:
+    "Convert Typst documents to PDF online. Live editor, version pinning, templates, and instant download.",
+};
 
 export default function TypstToPdfPage() {
   return (

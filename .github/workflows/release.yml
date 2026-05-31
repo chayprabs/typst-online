@@ -15,8 +15,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build worker container
-        run: docker build -t ghcr.io/chayprabs/typst-online-worker:${{ github.ref_name }} apps/worker
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build web container
-        run: docker build -t ghcr.io/chayprabs/typst-online-web:${{ github.ref_name }} -f apps/web/Dockerfile .
+      - name: Build and push worker
+        run: |
+          docker build -t ghcr.io/chayprabs/typst-online-worker:${{ github.ref_name }} apps/worker
+          docker push ghcr.io/chayprabs/typst-online-worker:${{ github.ref_name }}
+
+      - name: Build and push web
+        run: |
+          docker build -t ghcr.io/chayprabs/typst-online-web:${{ github.ref_name }} -f apps/web/Dockerfile .
+          docker push ghcr.io/chayprabs/typst-online-web:${{ github.ref_name }}

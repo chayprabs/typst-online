@@ -6,7 +6,8 @@ TypstBox is a free, open-source alternative to installing Typst locally — writ
 
 ## Features
 
-- **Live editor** — Monaco-based multi-file Typst workspace
+- **Live editor** — Monaco Typst syntax, multi-file tree, asset uploads
+- **Left sidebar** — compiler version, package browser, font manager
 - **Compile** — PDF (default), SVG, PNG, HTML with page ranges
 - **Version pinning** — last 3 stable typst-cli versions
 - **Packages** — allowlisted Typst Universe imports (`@preview/cetz`, etc.)
@@ -62,7 +63,25 @@ WORKER_URL=http://127.0.0.1:8080 pnpm --filter @typstbox/web dev
 
 AGPL-3.0 — see [LICENSE](LICENSE).
 
+## Routes
+
+| Path | Purpose |
+|------|---------|
+| `/` | Main playground |
+| `/t/{templateId}` | Fork template to edit |
+| `/typst-playground`, `/typst-resume`, … | SEO landing pages |
+| `/faq`, `/privacy`, `/terms` | Legal & help |
+
+## Testing
+
+```bash
+cd apps/worker && PYTHONPATH=. python3 -m pytest -q
+pnpm typecheck && pnpm --filter @typstbox/web build
+cd apps/web && pnpm exec playwright test
+```
+
 ## Links
 
 - GitHub: https://github.com/chayprabs/typst-online
+- FAQ: `/faq` on deployed site
 - Author: https://www.chaitanyaprabuddha.com

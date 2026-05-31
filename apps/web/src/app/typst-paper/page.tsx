@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
 import { TemplateLanding } from "@/components/TemplateLanding";
+
+export const metadata: Metadata = {
+  title: "Typst Paper Template — IEEE Style — TypstBox",
+  description: "Academic paper template for Typst. IEEE-style layout, compile to PDF online.",
+};
 
 export default function TypstPaperPage() {
   return (

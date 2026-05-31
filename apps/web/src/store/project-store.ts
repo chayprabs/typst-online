@@ -64,6 +64,7 @@ interface ProjectState {
   loadProject: (project: Project, options?: { preserveUi?: boolean }) => void;
   addFont: (font: ProjectFont) => void;
   setProjectPackages: (packages: ProjectPackage[]) => void;
+  setFontFallbackChain: (chain: string[]) => void;
   resetProject: () => void;
   setCompiling: (v: boolean) => void;
   setDiagnostics: (d: Diagnostic[]) => void;
@@ -170,6 +171,11 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   setProjectPackages: (packages) =>
     set((s) => ({
       project: { ...s.project, packages },
+    })),
+
+  setFontFallbackChain: (chain) =>
+    set((s) => ({
+      project: { ...s.project, fontFallbackChain: chain },
     })),
 
   resetProject: () =>

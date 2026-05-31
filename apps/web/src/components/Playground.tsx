@@ -16,7 +16,7 @@ import {
   loadTemplate,
 } from "@/lib/api";
 import { useProjectStore } from "@/store/project-store";
-import { FileTree } from "./FileTree";
+import { EditorSidebar } from "./EditorSidebar";
 import { PreviewPane } from "./PreviewPane";
 import { TypstEditor } from "./TypstEditor";
 
@@ -42,11 +42,8 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
   const setLintOnly = useProjectStore((s) => s.setLintOnly);
   const setOutputFormat = useProjectStore((s) => s.setOutputFormat);
   const setPageRange = useProjectStore((s) => s.setPageRange);
-  const setCompilerVersion = useProjectStore((s) => s.setCompilerVersion);
   const loadProject = useProjectStore((s) => s.loadProject);
   const addFile = useProjectStore((s) => s.addFile);
-  const addFont = useProjectStore((s) => s.addFont);
-  const setProjectPackages = useProjectStore((s) => s.setProjectPackages);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const compileGen = useRef(0);
@@ -202,39 +199,35 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
     }
   };
 
-  const handleFontUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, prefix: string) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onerror = () => setLastError("Font upload failed");
+    reader.onerror = () => setLastError("File upload failed");
     reader.onload = () => {
-      const base64 = (reader.result as string).split(",")[1];
-      addFont({ path: `fonts/${file.name}`, contentBase64: base64 });
+      const result = reader.result as string;
+      const path = `${prefix}/${file.name}`;
+      if (file.name.match(/\.(csv|json|txt|yaml|yml)$/i)) {
+        addFile(path, result);
+      } else {
+        addFile(path, result);
+      }
     };
-    reader.readAsDataURL(file);
+    if (file.name.match(/\.(csv|json|txt|yaml|yml)$/i)) {
+      reader.readAsText(file);
+    } else {
+      reader.readAsDataURL(file);
+    }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onerror = () => setLastError("Image upload failed");
-    reader.onload = () => {
-      addFile(`assets/${file.name}`, reader.result as string);
-    };
-    reader.readAsDataURL(file);
+  const downloadPdf = () => {
+    if (!previewUrl || previewFormat !== "pdf") return;
+    const a = document.createElement("a");
+    a.href = previewUrl;
+    a.download = `${project.id}.pdf`;
+    a.target = "_blank";
+    a.click();
   };
-
-  const addPackage = (name: string, version: string) => {
-    const state = useProjectStore.getState();
-    const rest = state.project.packages.filter((p) => p.name !== name);
-    setProjectPackages([...rest, { name, version }]);
-  };
-
-  const versionOptions =
-    versions.length > 0
-      ? versions
-      : PINNED_VERSIONS.map((v) => ({ version: v.version, label: v.label }));
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-4 sm:px-6">
@@ -265,18 +258,6 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
             <option value="svg">SVG</option>
             <option value="png">PNG</option>
             <option value="html">HTML</option>
-          </select>
-
-          <select
-            value={project.compilerVersion}
-            onChange={(e) => setCompilerVersion(e.target.value)}
-            className="rounded border border-[var(--border)] px-2 py-1.5 text-sm"
-          >
-            {versionOptions.map((v) => (
-              <option key={v.version} value={v.version}>
-                {v.label}
-              </option>
-            ))}
           </select>
 
           <input
@@ -316,33 +297,27 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
             ))}
           </select>
 
-          <select
-            className="max-w-[140px] rounded border border-[var(--border)] px-2 py-1.5 text-sm"
-            defaultValue=""
-            onChange={(e) => {
-              const pkg = packages.find((p) => p.name === e.target.value);
-              if (pkg) addPackage(pkg.name, pkg.versions[0]);
-              e.target.value = "";
-            }}
-          >
-            <option value="">Packages…</option>
-            {packages.map((p) => (
-              <option key={p.name} value={p.name}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-
-          <label className="cursor-pointer rounded border border-[var(--border)] px-2 py-1.5 text-sm hover:bg-neutral-50">
-            Font
-            <input type="file" accept=".ttf,.otf,.woff,.woff2" className="hidden" onChange={handleFontUpload} />
-          </label>
-
           <label className="inline-flex cursor-pointer items-center gap-1 rounded border border-[var(--border)] px-2 py-1.5 text-sm hover:bg-neutral-50">
             <ImagePlus className="h-4 w-4" />
-            Image
-            <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+            Asset
+            <input
+              type="file"
+              accept="image/*,.csv,.json,.txt"
+              className="hidden"
+              onChange={(e) => handleFileUpload(e, "assets")}
+            />
           </label>
+
+          {previewUrl && previewFormat === "pdf" && (
+            <button
+              type="button"
+              onClick={downloadPdf}
+              className="inline-flex items-center gap-1 rounded border border-[var(--border)] px-2 py-1.5 text-sm hover:bg-neutral-50"
+            >
+              <Download className="h-4 w-4" />
+              PDF
+            </button>
+          )}
 
           <button
             type="button"
@@ -389,9 +364,8 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
         </div>
       )}
 
-      <div className="grid h-[min(70vh,720px)] grid-cols-1 gap-0 overflow-hidden rounded-lg border border-[var(--border)] bg-white shadow-sm lg:grid-cols-[180px_1fr_1fr]">
-        {!readOnly && <FileTree />}
-        {readOnly && <div className="hidden lg:block" aria-hidden />}
+      <div className="grid h-[min(70vh,720px)] grid-cols-1 gap-0 overflow-hidden rounded-lg border border-[var(--border)] bg-white shadow-sm lg:grid-cols-[240px_1fr_1fr]">
+        <EditorSidebar readOnly={readOnly} packages={packages} versions={versions} />
         <TypstEditor readOnly={readOnly} />
         <PreviewPane url={previewUrl} urls={previewUrls} format={previewFormat} />
       </div>

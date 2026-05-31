@@ -13,8 +13,10 @@ test("seo routes respond", async ({ page }) => {
     "/typst-invoice",
     "/typst-paper",
     "/typst-to-pdf",
+    "/faq",
     "/privacy",
     "/terms",
+    "/t/resume-modern",
   ]) {
     const res = await page.goto(path);
     expect(res?.status()).toBeLessThan(400);

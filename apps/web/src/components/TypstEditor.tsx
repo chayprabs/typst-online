@@ -2,6 +2,8 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useRef } from "react";
+import { registerTypstLanguage } from "@/lib/typst-monaco";
+// Monaco types come from @monaco-editor/react at runtime
 import { useProjectStore } from "@/store/project-store";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
@@ -45,10 +47,10 @@ export function TypstEditor({ readOnly = false }: TypstEditorProps) {
   }, [markers, activeFile]);
 
   return (
-    <div className="h-full min-h-[320px] flex-1 border-r border-[var(--border)]">
+    <div className="h-full min-h-[320px] flex-1">
       <MonacoEditor
         height="100%"
-        language="markdown"
+        language="typst"
         theme="vs"
         value={content}
         onChange={(v) => !readOnly && setActiveContent(v ?? "")}
@@ -61,7 +63,11 @@ export function TypstEditor({ readOnly = false }: TypstEditorProps) {
           scrollBeyondLastLine: false,
           automaticLayout: true,
         }}
+        beforeMount={(monaco) => {
+          registerTypstLanguage(monaco);
+        }}
         onMount={(editor, monaco) => {
+          registerTypstLanguage(monaco);
           editorRef.current = editor;
           monacoRef.current = monaco;
           const model = editor.getModel();
