@@ -82,6 +82,21 @@ def test_compile_pdf():
     assert len(data["outputs"]) >= 1
 
 
+def test_local_file_import_allowed():
+    project = dict(SAMPLE_PROJECT)
+    project["files"] = [
+        {
+            "path": "main.typ",
+            "content": '#import "chapter.typ": *\n= Main\n',
+        },
+        {"path": "chapter.typ", "content": "#let x = [ok]\n"},
+    ]
+    project["mainPath"] = "main.typ"
+    r = client.post("/v1/compile", json={"project": project, "format": "pdf"})
+    assert r.status_code == 200
+    assert r.json()["ok"] is True
+
+
 def test_inline_import_not_allowed():
     project = dict(SAMPLE_PROJECT)
     project["packages"] = []

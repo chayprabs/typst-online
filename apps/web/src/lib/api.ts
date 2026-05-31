@@ -80,7 +80,14 @@ export async function exportZip(project: Project): Promise<Blob> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ project }),
   });
-  if (!res.ok) throw new Error("Export failed");
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(
+      typeof err.detail === "object"
+        ? err.detail.message || JSON.stringify(err.detail)
+        : String(err.detail || res.statusText),
+    );
+  }
   return res.blob();
 }
 

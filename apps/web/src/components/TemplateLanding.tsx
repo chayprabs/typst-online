@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { loadTemplate } from "@/lib/api";
 import { useProjectStore } from "@/store/project-store";
 
@@ -15,16 +16,24 @@ export function TemplateLanding({ title, description, templateIds }: TemplateLan
   const router = useRouter();
   const loadProject = useProjectStore((s) => s.loadProject);
 
+  const [error, setError] = useState<string | null>(null);
+
   const openTemplate = async (id: string) => {
-    const { project } = await loadTemplate(id);
-    loadProject(project);
-    router.push("/");
+    setError(null);
+    try {
+      const { project } = await loadTemplate(id);
+      loadProject(project);
+      router.push("/");
+    } catch {
+      setError("Could not load template. Is the worker running?");
+    }
   };
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12 text-center sm:px-6">
       <h1 className="text-2xl font-semibold">{title}</h1>
       <p className="mt-2 text-[var(--muted)]">{description}</p>
+      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         {templateIds.map((id) => (
           <button

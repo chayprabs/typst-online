@@ -31,22 +31,23 @@ def validate_packages(project: Project) -> None:
             )
 
 
+def _is_universe_package(spec: str) -> bool:
+    """Universe packages use @preview/name or @namespace/name syntax."""
+    return spec.startswith("@")
+
+
 def scan_source_imports(project: Project) -> None:
-    """Reject non-allowlisted #import directives in Typst source."""
+    """Reject non-allowlisted Universe #import directives (local .typ imports are allowed)."""
     for f in project.files:
         if not f.path.endswith(".typ"):
             continue
         for match in _IMPORT_RE.finditer(f.content):
             spec = match.group(1) or match.group(2)
-            if not spec:
+            if not spec or not _is_universe_package(spec):
                 continue
-            if spec.startswith("@"):
-                parts = spec.split(":")
-                name = parts[0]
-                version = parts[1] if len(parts) > 1 else None
-            else:
-                name = spec
-                version = None
+            parts = spec.split(":")
+            name = parts[0]
+            version = parts[1] if len(parts) > 1 else None
             allowed = ALLOWED_PACKAGES.get(name)
             if not allowed:
                 raise HTTPException(

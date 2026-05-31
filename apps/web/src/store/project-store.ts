@@ -9,10 +9,7 @@ function newId(): string {
 
 const DEFAULT_MAIN = `main.typ`;
 
-const defaultContent = `#set page(margin: 1.5cm)
-#set text(font: "Linux Libertine", size: 11pt)
-
-= Welcome to TypstBox
+const defaultContent = `= Welcome to TypstBox
 
 Edit this document and click **Compile** to generate a PDF preview.
 
@@ -21,6 +18,8 @@ Edit this document and click **Compile** to generate a PDF preview.
 - PDF, SVG, PNG, and HTML export
 - Pinned compiler versions
 - Template gallery
+
+// Tip: add #set page(margin: 1.5cm) for PDF-specific layout
 `;
 
 function createDefaultProject(): Project {
@@ -44,6 +43,8 @@ interface ProjectState {
   lintOnly: boolean;
   diagnostics: Diagnostic[];
   previewUrl: string | null;
+  previewUrls: string[];
+  previewFormat: OutputFormat;
   lastError: string | null;
   setActiveFile: (path: string) => void;
   updateFile: (path: string, content: string) => void;
@@ -59,6 +60,7 @@ interface ProjectState {
   setCompiling: (v: boolean) => void;
   setDiagnostics: (d: Diagnostic[]) => void;
   setPreviewUrl: (url: string | null) => void;
+  setPreview: (url: string | null, urls: string[], format: OutputFormat) => void;
   setLastError: (e: string | null) => void;
   getActiveContent: () => string;
   setActiveContent: (content: string) => void;
@@ -73,6 +75,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   lintOnly: false,
   diagnostics: [],
   previewUrl: null,
+  previewUrls: [],
+  previewFormat: "pdf",
   lastError: null,
 
   setActiveFile: (path) => set({ activeFile: path }),
@@ -95,16 +99,20 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     }),
 
   renameFile: (oldPath, newPath) =>
-    set((s) => ({
-      project: {
-        ...s.project,
-        files: s.project.files.map((f) =>
-          f.path === oldPath ? { ...f, path: newPath } : f,
-        ),
-        mainPath: s.project.mainPath === oldPath ? newPath : s.project.mainPath,
-      },
-      activeFile: s.activeFile === oldPath ? newPath : s.activeFile,
-    })),
+    set((s) => {
+      if (oldPath === newPath) return s;
+      if (s.project.files.some((f) => f.path === newPath)) return s;
+      return {
+        project: {
+          ...s.project,
+          files: s.project.files.map((f) =>
+            f.path === oldPath ? { ...f, path: newPath } : f,
+          ),
+          mainPath: s.project.mainPath === oldPath ? newPath : s.project.mainPath,
+        },
+        activeFile: s.activeFile === oldPath ? newPath : s.activeFile,
+      };
+    }),
 
   deleteFile: (path) =>
     set((s) => {
@@ -132,8 +140,13 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set({
       project,
       activeFile: project.mainPath || project.files[0]?.path || DEFAULT_MAIN,
+      outputFormat: "pdf",
+      pageRange: "",
+      lintOnly: false,
       diagnostics: [],
       previewUrl: null,
+      previewUrls: [],
+      previewFormat: "pdf",
       lastError: null,
     }),
 
@@ -141,14 +154,21 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set({
       project: createDefaultProject(),
       activeFile: DEFAULT_MAIN,
+      outputFormat: "pdf",
+      pageRange: "",
+      lintOnly: false,
       diagnostics: [],
       previewUrl: null,
+      previewUrls: [],
+      previewFormat: "pdf",
       lastError: null,
     }),
 
   setCompiling: (v) => set({ compiling: v }),
   setDiagnostics: (d) => set({ diagnostics: d }),
   setPreviewUrl: (url) => set({ previewUrl: url }),
+  setPreview: (url, urls, format) =>
+    set({ previewUrl: url, previewUrls: urls, previewFormat: format }),
   setLastError: (e) => set({ lastError: e }),
 
   getActiveContent: () => {

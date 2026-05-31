@@ -3,6 +3,7 @@
 import { Download, ImagePlus, Loader2, Play, Share2, Stethoscope } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { OutputFormat } from "@typstbox/shared-types";
+import { PINNED_VERSIONS } from "@typstbox/shared-types";
 import {
   artifactUrl,
   compileProject,
@@ -31,10 +32,12 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
   const compiling = useProjectStore((s) => s.compiling);
   const diagnostics = useProjectStore((s) => s.diagnostics);
   const previewUrl = useProjectStore((s) => s.previewUrl);
+  const previewUrls = useProjectStore((s) => s.previewUrls);
+  const previewFormat = useProjectStore((s) => s.previewFormat);
   const lastError = useProjectStore((s) => s.lastError);
   const setCompiling = useProjectStore((s) => s.setCompiling);
   const setDiagnostics = useProjectStore((s) => s.setDiagnostics);
-  const setPreviewUrl = useProjectStore((s) => s.setPreviewUrl);
+  const setPreview = useProjectStore((s) => s.setPreview);
   const setLastError = useProjectStore((s) => s.setLastError);
   const setLintOnly = useProjectStore((s) => s.setLintOnly);
   const setOutputFormat = useProjectStore((s) => s.setOutputFormat);
@@ -44,7 +47,10 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
   const addFile = useProjectStore((s) => s.addFile);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [versions, setVersions] = useState<{ version: string; label: string }[]>([]);
+  const compileGen = useRef(0);
+  const [versions, setVersions] = useState<{ version: string; label: string }[]>(
+    PINNED_VERSIONS.map((v) => ({ version: v.version, label: v.label })),
+  );
   const [templates, setTemplates] = useState<
     { id: string; title: string; description: string }[]
   >([]);
@@ -53,7 +59,6 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
   >([]);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [previewFormat, setPreviewFormat] = useState<OutputFormat>("pdf");
 
   useEffect(() => {
     Promise.all([getVersions(), getTemplates(), getPackages()])
@@ -66,18 +71,22 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
   }, []);
 
   const runCompile = useCallback(async () => {
+    const gen = ++compileGen.current;
     const state = useProjectStore.getState();
+
     if (state.lintOnly) {
       setCompiling(true);
       try {
         const result = await lintProject({ project: state.project, lintOnly: true });
+        if (gen !== compileGen.current) return;
         setDiagnostics(result.diagnostics);
-        setPreviewUrl(null);
-        setLastError(result.ok && result.diagnostics.length === 0 ? null : "Lint finished");
+        setPreview(null, [], state.outputFormat);
+        setLastError(null);
       } catch (e) {
+        if (gen !== compileGen.current) return;
         setLastError(e instanceof Error ? e.message : "Lint failed");
       } finally {
-        setCompiling(false);
+        if (gen === compileGen.current) setCompiling(false);
       }
       return;
     }
@@ -90,40 +99,36 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
         format: state.outputFormat,
         pageRange: state.pageRange || undefined,
       });
+      if (gen !== compileGen.current) return;
       setDiagnostics(result.diagnostics);
       if (!result.ok) {
-        setPreviewUrl(null);
+        setPreview(null, [], state.outputFormat);
         setLastError("Compilation failed — see diagnostics");
         return;
       }
-      const match =
-        result.outputs.find((o) => o.format === state.outputFormat) || result.outputs[0];
-      if (match) {
-        setPreviewUrl(artifactUrl(match.url));
-        setPreviewFormat(state.outputFormat);
-      }
+      const fmt = state.outputFormat;
+      const matching = result.outputs.filter((o) => o.format === fmt);
+      const outputs = matching.length > 0 ? matching : result.outputs;
+      const urls = outputs.map((o) => artifactUrl(o.url));
+      setPreview(urls[0] ?? null, urls, fmt);
+      setLastError(null);
     } catch (e) {
+      if (gen !== compileGen.current) return;
       setLastError(e instanceof Error ? e.message : "Compile failed");
     } finally {
-      setCompiling(false);
+      if (gen === compileGen.current) setCompiling(false);
     }
-  }, [setCompiling, setDiagnostics, setPreviewUrl, setLastError]);
+  }, [setCompiling, setDiagnostics, setPreview, setLastError]);
 
   const filesKey = JSON.stringify(project.files);
   const fontsKey = JSON.stringify(project.fonts);
   const packagesKey = JSON.stringify(project.packages);
+  const projectId = project.id;
 
   useEffect(() => {
     if (readOnly) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      const state = useProjectStore.getState();
-      if (state.lintOnly) {
-        runCompile();
-      } else {
-        runCompile();
-      }
-    }, 800);
+    debounceRef.current = setTimeout(() => runCompile(), 800);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
@@ -138,6 +143,11 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
     readOnly,
     runCompile,
   ]);
+
+  useEffect(() => {
+    if (!readOnly) return;
+    runCompile();
+  }, [readOnly, projectId, runCompile]);
 
   const handleShare = async () => {
     try {
@@ -179,6 +189,7 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
+    reader.onerror = () => setLastError("Font upload failed");
     reader.onload = () => {
       const base64 = (reader.result as string).split(",")[1];
       const state = useProjectStore.getState();
@@ -194,9 +205,9 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
+    reader.onerror = () => setLastError("Image upload failed");
     reader.onload = () => {
-      const dataUrl = reader.result as string;
-      addFile(`assets/${file.name}`, dataUrl);
+      addFile(`assets/${file.name}`, reader.result as string);
     };
     reader.readAsDataURL(file);
   };
@@ -209,6 +220,11 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
       packages: [...rest, { name, version }],
     });
   };
+
+  const versionOptions =
+    versions.length > 0
+      ? versions
+      : PINNED_VERSIONS.map((v) => ({ version: v.version, label: v.label }));
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-4 sm:px-6">
@@ -246,7 +262,7 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
             onChange={(e) => setCompilerVersion(e.target.value)}
             className="rounded border border-[var(--border)] px-2 py-1.5 text-sm"
           >
-            {versions.map((v) => (
+            {versionOptions.map((v) => (
               <option key={v.version} value={v.version}>
                 {v.label}
               </option>
@@ -267,7 +283,7 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
               checked={lintOnly}
               onChange={(e) => {
                 setLintOnly(e.target.checked);
-                if (e.target.checked) setPreviewUrl(null);
+                if (e.target.checked) setPreview(null, [], outputFormat);
               }}
             />
             <Stethoscope className="h-3.5 w-3.5" />
@@ -345,7 +361,7 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
         <div className="mb-3 max-h-24 overflow-y-auto rounded border border-red-200 bg-red-50 p-2 text-xs text-red-800">
           {diagnostics.map((d, i) => (
             <div key={i}>
-              {d.file}:{d.line}:{d.column} — {d.message}
+              {d.file}:{d.line}:{d.column} — [{d.severity}] {d.message}
             </div>
           ))}
         </div>
@@ -353,9 +369,8 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
 
       <div className="grid h-[min(70vh,720px)] grid-cols-1 gap-0 overflow-hidden rounded-lg border border-[var(--border)] bg-white shadow-sm lg:grid-cols-[180px_1fr_1fr]">
         {!readOnly && <FileTree />}
-        {readOnly && <div className="hidden lg:block" />}
         <TypstEditor readOnly={readOnly} />
-        <PreviewPane url={previewUrl} format={previewFormat} />
+        <PreviewPane url={previewUrl} urls={previewUrls} format={previewFormat} />
       </div>
     </div>
   );

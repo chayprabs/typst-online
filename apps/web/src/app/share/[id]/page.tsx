@@ -15,18 +15,29 @@ export default function SharePage() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     getShare(id)
       .then((r) => {
+        if (cancelled) return;
         loadProject(r.project);
         setReady(true);
       })
-      .catch(() => setError("Share not found"));
+      .catch(() => {
+        if (!cancelled) setError("Share not found");
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [id, loadProject]);
 
   const handleFork = async () => {
-    const { project } = await forkShare(id);
-    loadProject(project);
-    router.push("/");
+    try {
+      const { project } = await forkShare(id);
+      loadProject(project);
+      router.push("/");
+    } catch {
+      setError("Could not fork this share");
+    }
   };
 
   if (error) {

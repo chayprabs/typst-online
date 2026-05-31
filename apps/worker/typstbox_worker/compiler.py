@@ -113,18 +113,36 @@ def _write_project(project: Project, work_dir: Path) -> Path:
         raise HTTPException(status_code=400, detail="MAIN_FILE_NOT_FOUND")
 
     pkg_lines = package_import_lines(project)
-    if pkg_lines:
-        existing = main_path.read_text(encoding="utf-8")
-        if not existing.lstrip().startswith("#import"):
-            main_path.write_text("\n".join(pkg_lines) + "\n" + existing, encoding="utf-8")
+    existing = main_path.read_text(encoding="utf-8")
+    prefix_lines: list[str] = []
+    if pkg_lines and not existing.lstrip().startswith("#import"):
+        prefix_lines.extend(pkg_lines)
+    if project.fontFallbackChain and "#set text(font:" not in existing:
+        fonts = ", ".join(f'"{f}"' for f in project.fontFallbackChain)
+        prefix_lines.append(f"#set text(font: ({fonts}))")
+    if prefix_lines:
+        main_path.write_text("\n".join(prefix_lines) + "\n" + existing, encoding="utf-8")
 
     return main_path
 
 
+_TYPST13_HEAD_RE = re.compile(r"^(?P<severity>error|warning):\s*(?P<msg>.+)$", re.MULTILINE)
+_TYPST13_LOC_RE = re.compile(r"┌─\s*(?P<file>[^:]+):(?P<line>\d+):(?P<col>\d+)")
+
+
 def _parse_diagnostics(stderr: str, stdout: str) -> list[Diagnostic]:
     diagnostics: list[Diagnostic] = []
+    seen: set[tuple] = set()
+
     for text in (stderr, stdout):
+        if not text.strip():
+            continue
+
         for match in _DIAG_RE.finditer(text):
+            key = (match.group("file"), match.group("line"), match.group("msg"))
+            if key in seen:
+                continue
+            seen.add(key)
             diagnostics.append(
                 Diagnostic(
                     file=match.group("file"),
@@ -134,14 +152,42 @@ def _parse_diagnostics(stderr: str, stdout: str) -> list[Diagnostic]:
                     message=match.group("msg").strip(),
                 )
             )
+
+        for head in _TYPST13_HEAD_RE.finditer(text):
+            severity = head.group("severity")
+            msg = head.group("msg").strip()
+            block_end = text.find("\n\n", head.end())
+            block = text[head.start() : block_end if block_end != -1 else len(text)]
+            loc = _TYPST13_LOC_RE.search(block)
+            file_name = loc.group("file") if loc else ""
+            line_no = int(loc.group("line")) if loc else 1
+            col_no = int(loc.group("col")) if loc else 1
+            key = (file_name, line_no, msg)
+            if key in seen:
+                continue
+            seen.add(key)
+            diagnostics.append(
+                Diagnostic(
+                    file=file_name,
+                    line=line_no,
+                    column=col_no,
+                    severity=severity,
+                    message=msg,
+                )
+            )
+
     if not diagnostics and stderr.strip():
+        first_line = stderr.strip().split("\n")[0]
+        severity = "warning" if first_line.startswith("warning:") else "error"
+        message = first_line.split(":", 1)[-1].strip() if ":" in first_line else stderr.strip()[:500]
+        loc = _TYPST13_LOC_RE.search(stderr)
         diagnostics.append(
             Diagnostic(
-                file="",
-                line=1,
-                column=1,
-                severity="error",
-                message=stderr.strip()[:500],
+                file=loc.group("file") if loc else "",
+                line=int(loc.group("line")) if loc else 1,
+                column=int(loc.group("col")) if loc else 1,
+                severity=severity,
+                message=message,
             )
         )
     return diagnostics
