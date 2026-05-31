@@ -1,0 +1,4 @@
+Contact: https://www.chaitanyaprabuddha.com
+Preferred-Languages: en
+Canonical: https://github.com/chayprabs/typst-online/security/policy
+Policy: https://github.com/chayprabs/typst-online/blob/main/SECURITY.md

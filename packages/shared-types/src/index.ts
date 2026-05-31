@@ -24,6 +24,7 @@ export interface Project {
   packages: ProjectPackage[];
   compilerVersion: string;
   mainPath?: string;
+  fontFallbackChain?: string[];
 }
 
 export interface Diagnostic {

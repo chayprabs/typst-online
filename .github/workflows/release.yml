@@ -1,0 +1,22 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build worker container
+        run: docker build -t ghcr.io/chayprabs/typst-online-worker:${{ github.ref_name }} apps/worker
+
+      - name: Build web container
+        run: docker build -t ghcr.io/chayprabs/typst-online-web:${{ github.ref_name }} -f apps/web/Dockerfile .

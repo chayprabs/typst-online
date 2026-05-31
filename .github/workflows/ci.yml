@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-typecheck-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install Typst
+        run: |
+          curl -fsSL https://github.com/typst/typst/releases/download/v0.13.1/typst-x86_64-unknown-linux-musl.tar.xz \
+            | sudo tar -xJ --strip-components=1 -C /usr/local/bin typst-x86_64-unknown-linux-musl/typst
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build shared-types
+        run: pnpm --filter @typstbox/shared-types build
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint web
+        run: pnpm --filter @typstbox/web lint
+
+      - name: Unit tests (JS)
+        run: pnpm --filter @typstbox/shared-types test
+
+      - name: Worker tests
+        run: |
+          pip install -r apps/worker/requirements.txt
+          cd apps/worker && pytest -q
+
+      - name: Build web
+        run: pnpm --filter @typstbox/web build
+        env:
+          WORKER_URL: http://127.0.0.1:8080
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: lint-typecheck-test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate compose
+        run: docker compose config
+
+      - name: Build worker image
+        run: docker build -t typstbox-worker:test apps/worker
+
+      - name: Build web image
+        run: docker build -t typstbox-web:test -f apps/web/Dockerfile .
