@@ -1,6 +1,12 @@
 "use client";
 
-import type { Diagnostic, OutputFormat, Project } from "@typstbox/shared-types";
+import type {
+  Diagnostic,
+  OutputFormat,
+  Project,
+  ProjectFont,
+  ProjectPackage,
+} from "@typstbox/shared-types";
 import { create } from "zustand";
 
 function newId(): string {
@@ -55,7 +61,9 @@ interface ProjectState {
   setOutputFormat: (format: OutputFormat) => void;
   setPageRange: (range: string) => void;
   setLintOnly: (v: boolean) => void;
-  loadProject: (project: Project) => void;
+  loadProject: (project: Project, options?: { preserveUi?: boolean }) => void;
+  addFont: (font: ProjectFont) => void;
+  setProjectPackages: (packages: ProjectPackage[]) => void;
   resetProject: () => void;
   setCompiling: (v: boolean) => void;
   setDiagnostics: (d: Diagnostic[]) => void;
@@ -136,19 +144,33 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   setPageRange: (range) => set({ pageRange: range }),
   setLintOnly: (v) => set({ lintOnly: v }),
 
-  loadProject: (project) =>
-    set({
+  loadProject: (project, options) =>
+    set((s) => ({
       project,
       activeFile: project.mainPath || project.files[0]?.path || DEFAULT_MAIN,
-      outputFormat: "pdf",
-      pageRange: "",
-      lintOnly: false,
+      ...(options?.preserveUi
+        ? {}
+        : {
+            outputFormat: "pdf" as OutputFormat,
+            pageRange: "",
+            lintOnly: false,
+            previewUrl: null,
+            previewUrls: [],
+            previewFormat: "pdf" as OutputFormat,
+          }),
       diagnostics: [],
-      previewUrl: null,
-      previewUrls: [],
-      previewFormat: "pdf",
       lastError: null,
-    }),
+    })),
+
+  addFont: (font) =>
+    set((s) => ({
+      project: { ...s.project, fonts: [...s.project.fonts, font] },
+    })),
+
+  setProjectPackages: (packages) =>
+    set((s) => ({
+      project: { ...s.project, packages },
+    })),
 
   resetProject: () =>
     set({

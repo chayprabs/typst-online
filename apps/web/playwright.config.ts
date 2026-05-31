@@ -14,13 +14,13 @@ export default defineConfig({
     {
       command: "cd ../../apps/worker && pip install -q -r requirements.txt && uvicorn typstbox_worker.main:app --port 8080",
       url: "http://127.0.0.1:8080/health",
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: true,
       timeout: 120000,
     },
     {
       command: "pnpm dev",
       url: "http://127.0.0.1:3000",
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: true,
       env: { WORKER_URL: "http://127.0.0.1:8080" },
     },
   ],

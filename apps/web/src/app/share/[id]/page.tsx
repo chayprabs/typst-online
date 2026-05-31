@@ -15,6 +15,8 @@ export default function SharePage() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    setReady(false);
+    setError(null);
     let cancelled = false;
     getShare(id)
       .then((r) => {

@@ -45,9 +45,18 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
   const setCompilerVersion = useProjectStore((s) => s.setCompilerVersion);
   const loadProject = useProjectStore((s) => s.loadProject);
   const addFile = useProjectStore((s) => s.addFile);
+  const addFont = useProjectStore((s) => s.addFont);
+  const setProjectPackages = useProjectStore((s) => s.setProjectPackages);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const compileGen = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      compileGen.current += 1;
+    };
+  }, []);
+
   const [versions, setVersions] = useState<{ version: string; label: string }[]>(
     PINNED_VERSIONS.map((v) => ({ version: v.version, label: v.label })),
   );
@@ -73,20 +82,25 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
   const runCompile = useCallback(async () => {
     const gen = ++compileGen.current;
     const state = useProjectStore.getState();
+    const startedProjectId = state.project.id;
+    const isStale = () =>
+      gen !== compileGen.current ||
+      useProjectStore.getState().project.id !== startedProjectId;
 
     if (state.lintOnly) {
       setCompiling(true);
       try {
         const result = await lintProject({ project: state.project, lintOnly: true });
-        if (gen !== compileGen.current) return;
+        if (isStale()) return;
         setDiagnostics(result.diagnostics);
         setPreview(null, [], state.outputFormat);
         setLastError(null);
       } catch (e) {
-        if (gen !== compileGen.current) return;
+        if (isStale()) return;
+        setPreview(null, [], state.outputFormat);
         setLastError(e instanceof Error ? e.message : "Lint failed");
       } finally {
-        if (gen === compileGen.current) setCompiling(false);
+        if (!isStale()) setCompiling(false);
       }
       return;
     }
@@ -99,7 +113,7 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
         format: state.outputFormat,
         pageRange: state.pageRange || undefined,
       });
-      if (gen !== compileGen.current) return;
+      if (isStale()) return;
       setDiagnostics(result.diagnostics);
       if (!result.ok) {
         setPreview(null, [], state.outputFormat);
@@ -113,10 +127,11 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
       setPreview(urls[0] ?? null, urls, fmt);
       setLastError(null);
     } catch (e) {
-      if (gen !== compileGen.current) return;
+      if (isStale()) return;
+      setPreview(null, [], state.outputFormat);
       setLastError(e instanceof Error ? e.message : "Compile failed");
     } finally {
-      if (gen === compileGen.current) setCompiling(false);
+      if (!isStale()) setCompiling(false);
     }
   }, [setCompiling, setDiagnostics, setPreview, setLastError]);
 
@@ -168,9 +183,11 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
     try {
       const blob = await exportZip(project);
       const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
+      const objectUrl = URL.createObjectURL(blob);
+      a.href = objectUrl;
       a.download = `${project.id}.zip`;
       a.click();
+      URL.revokeObjectURL(objectUrl);
     } catch (e) {
       setLastError(e instanceof Error ? e.message : "Export failed");
     }
@@ -192,11 +209,7 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
     reader.onerror = () => setLastError("Font upload failed");
     reader.onload = () => {
       const base64 = (reader.result as string).split(",")[1];
-      const state = useProjectStore.getState();
-      loadProject({
-        ...state.project,
-        fonts: [...state.project.fonts, { path: `fonts/${file.name}`, contentBase64: base64 }],
-      });
+      addFont({ path: `fonts/${file.name}`, contentBase64: base64 });
     };
     reader.readAsDataURL(file);
   };
@@ -215,10 +228,7 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
   const addPackage = (name: string, version: string) => {
     const state = useProjectStore.getState();
     const rest = state.project.packages.filter((p) => p.name !== name);
-    loadProject({
-      ...state.project,
-      packages: [...rest, { name, version }],
-    });
+    setProjectPackages([...rest, { name, version }]);
   };
 
   const versionOptions =
@@ -353,7 +363,19 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
           </button>
 
           {shareUrl && <span className="text-xs text-green-700">Link copied!</span>}
-          {lastError && <span className="text-xs text-red-600">{lastError}</span>}
+        </div>
+      )}
+
+      {lastError && (
+        <div className="mb-3 rounded border border-red-200 bg-red-50 p-2 text-sm text-red-800">
+          {lastError}
+        </div>
+      )}
+
+      {readOnly && compiling && (
+        <div className="mb-3 flex items-center gap-2 text-sm text-[var(--muted)]">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Compiling preview…
         </div>
       )}
 
@@ -369,6 +391,7 @@ export function Playground({ readOnly = false }: PlaygroundProps) {
 
       <div className="grid h-[min(70vh,720px)] grid-cols-1 gap-0 overflow-hidden rounded-lg border border-[var(--border)] bg-white shadow-sm lg:grid-cols-[180px_1fr_1fr]">
         {!readOnly && <FileTree />}
+        {readOnly && <div className="hidden lg:block" aria-hidden />}
         <TypstEditor readOnly={readOnly} />
         <PreviewPane url={previewUrl} urls={previewUrls} format={previewFormat} />
       </div>
