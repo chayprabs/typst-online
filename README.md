@@ -59,9 +59,16 @@ WORKER_URL=http://127.0.0.1:8080 pnpm --filter @typstbox/web dev
 | POST | `/v1/share` | Create share link |
 | POST | `/v1/export/zip` | Download project ZIP |
 
+## Legal
+
+- **Privacy:** `/privacy` on the deployed site ([source](apps/web/src/app/privacy/page.tsx))
+- **Terms:** `/terms` ([source](apps/web/src/app/terms/page.tsx))
+- **Overview:** [LEGAL.md](LEGAL.md)
+- **Contact:** chaitanyaplusplus@gmail.com
+
 ## License
 
-AGPL-3.0 — see [LICENSE](LICENSE).
+GNU **AGPL-3.0** — full text in [LICENSE](LICENSE). Copyright (C) 2025-2026 Chaitanya Prabuddha.
 
 ## Routes
 

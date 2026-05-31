@@ -59,9 +59,19 @@ export default function FaqPage() {
           </p>
         </div>
         <div>
-          <h2 className="text-lg font-medium">What license applies?</h2>
+          <h2 className="text-lg font-medium">What license and legal terms apply?</h2>
           <p className="mt-1 text-[var(--muted)]">
-            TypstBox is AGPL-3.0. You may use, modify, and self-host under those terms.
+            The source code is licensed under GNU AGPL-3.0 (see the repository{" "}
+            <code className="rounded bg-neutral-100 px-1">LICENSE</code> file). Use of the
+            hosted website is also subject to our{" "}
+            <Link href="/terms" className="text-[var(--accent)] hover:underline">
+              Terms &amp; Conditions
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="text-[var(--accent)] hover:underline">
+              Privacy Policy
+            </Link>
+            .
           </p>
         </div>
       </section>
