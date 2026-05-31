@@ -1,0 +1,12 @@
+services:
+  typstbox:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        - SINGLE_IMAGE=true
+    ports:
+      - "3000:3000"
+    environment:
+      - WORKER_URL=http://127.0.0.1:8081
+    depends_on: []
