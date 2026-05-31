@@ -44,7 +44,7 @@ jobs:
       - name: Worker tests
         run: |
           pip install -r apps/worker/requirements.txt
-          cd apps/worker && pytest -q
+          cd apps/worker && PYTHONPATH=. python3 -m pytest -q
 
       - name: Build web
         run: pnpm --filter @typstbox/web build
@@ -59,6 +59,7 @@ jobs:
         run: pnpm --filter @typstbox/web test:e2e
         env:
           CI: "true"
+        continue-on-error: false
 
   docker:
     runs-on: ubuntu-latest
@@ -74,3 +75,5 @@ jobs:
 
       - name: Build web image
         run: docker build -t typstbox-web:test -f apps/web/Dockerfile .
+        env:
+          WORKER_URL: http://worker:8080
