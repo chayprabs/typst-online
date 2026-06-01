@@ -22,14 +22,13 @@ export function PdfPreview({ url }: PdfPreviewProps) {
         const pdfjs = await import("pdfjs-dist");
         pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
-        const doc = await pdfjs.getDocument(url).promise;
+        const doc = await pdfjs.getDocument({ url }).promise;
         const page = await doc.getPage(1);
         const viewport = page.getViewport({ scale: 1.2 });
         const canvas = canvasRef.current!;
-        const ctx = canvas.getContext("2d")!;
         canvas.height = viewport.height;
         canvas.width = viewport.width;
-        await page.render({ canvasContext: ctx, viewport }).promise;
+        await page.render({ canvas, viewport }).promise;
         if (!cancelled) setLoading(false);
       } catch (e) {
         if (!cancelled) {
