@@ -5,6 +5,7 @@ const workerUrl = process.env.WORKER_URL || "http://127.0.0.1:8080";
 const nextConfig: NextConfig = {
   output: "standalone",
   transpilePackages: ["@typstbox/shared-types"],
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
   async rewrites() {
     return [
       {

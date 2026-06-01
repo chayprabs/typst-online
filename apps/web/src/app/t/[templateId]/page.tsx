@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { TemplateForkPage } from "@/components/TemplateForkPage";
+import { fetchTemplateProject } from "@/lib/worker";
 
 type Props = { params: Promise<{ templateId: string }> };
 
@@ -14,5 +15,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function TemplateRoutePage({ params }: Props) {
   const { templateId } = await params;
-  return <TemplateForkPage templateId={templateId} />;
+  const project = await fetchTemplateProject(templateId);
+  return <TemplateForkPage templateId={templateId} initialProject={project} />;
 }

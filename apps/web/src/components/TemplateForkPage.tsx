@@ -1,45 +1,30 @@
 "use client";
 
+import type { Project } from "@typstbox/shared-types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useLayoutEffect } from "react";
 import { Playground } from "@/components/Playground";
-import { loadTemplate } from "@/lib/api";
 import { useProjectStore } from "@/store/project-store";
 
 interface TemplateForkPageProps {
   templateId: string;
+  initialProject: Project | null;
 }
 
-function TemplateForkPageContent({ templateId }: { templateId: string }) {
+function TemplateForkPageContent({
+  templateId,
+  initialProject,
+}: {
+  templateId: string;
+  initialProject: Project;
+}) {
   const router = useRouter();
   const loadProject = useProjectStore((s) => s.loadProject);
-  const [error, setError] = useState<string | null>(null);
-  const [ready, setReady] = useState(false);
 
-  useEffect(() => {
-    loadTemplate(templateId)
-      .then(({ project }) => {
-        loadProject(project);
-        setReady(true);
-      })
-      .catch(() => setError("Template not found"));
-  }, [templateId, loadProject]);
-
-  if (error) {
-    return (
-      <div className="p-8 text-center">
-        <p className="text-red-600">{error}</p>
-        <Link href="/" className="mt-4 inline-block text-[var(--accent)] hover:underline">
-          ← Back to playground
-        </Link>
-      </div>
-    );
-  }
-
-  if (!ready) {
-    return <div className="p-8 text-center text-[var(--muted)]">Loading template…</div>;
-  }
+  useLayoutEffect(() => {
+    loadProject(initialProject);
+  }, [templateId, initialProject, loadProject]);
 
   return (
     <>
@@ -58,6 +43,23 @@ function TemplateForkPageContent({ templateId }: { templateId: string }) {
   );
 }
 
-export function TemplateForkPage({ templateId }: TemplateForkPageProps) {
-  return <TemplateForkPageContent key={templateId} templateId={templateId} />;
+export function TemplateForkPage({ templateId, initialProject }: TemplateForkPageProps) {
+  if (!initialProject) {
+    return (
+      <div className="p-8 text-center">
+        <p className="text-red-600">Template not found</p>
+        <Link href="/" className="mt-4 inline-block text-[var(--accent)] hover:underline">
+          ← Back to playground
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <TemplateForkPageContent
+      key={templateId}
+      templateId={templateId}
+      initialProject={initialProject}
+    />
+  );
 }
