@@ -146,7 +146,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   setLintOnly: (v) => set({ lintOnly: v }),
 
   loadProject: (project, options) =>
-    set((s) => ({
+    set(() => ({
       project,
       activeFile: project.mainPath || project.files[0]?.path || DEFAULT_MAIN,
       ...(options?.preserveUi

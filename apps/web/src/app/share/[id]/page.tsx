@@ -6,17 +6,13 @@ import { Playground } from "@/components/Playground";
 import { forkShare, getShare } from "@/lib/api";
 import { useProjectStore } from "@/store/project-store";
 
-export default function SharePage() {
-  const params = useParams();
+function SharePageContent({ id }: { id: string }) {
   const router = useRouter();
-  const id = params.id as string;
   const loadProject = useProjectStore((s) => s.loadProject);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    setReady(false);
-    setError(null);
     let cancelled = false;
     getShare(id)
       .then((r) => {
@@ -65,4 +61,10 @@ export default function SharePage() {
       <Playground readOnly />
     </>
   );
+}
+
+export default function SharePage() {
+  const params = useParams();
+  const id = params.id as string;
+  return <SharePageContent key={id} id={id} />;
 }

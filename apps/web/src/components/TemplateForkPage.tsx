@@ -11,15 +11,13 @@ interface TemplateForkPageProps {
   templateId: string;
 }
 
-export function TemplateForkPage({ templateId }: TemplateForkPageProps) {
+function TemplateForkPageContent({ templateId }: { templateId: string }) {
   const router = useRouter();
   const loadProject = useProjectStore((s) => s.loadProject);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    setReady(false);
-    setError(null);
     loadTemplate(templateId)
       .then(({ project }) => {
         loadProject(project);
@@ -58,4 +56,8 @@ export function TemplateForkPage({ templateId }: TemplateForkPageProps) {
       <Playground />
     </>
   );
+}
+
+export function TemplateForkPage({ templateId }: TemplateForkPageProps) {
+  return <TemplateForkPageContent key={templateId} templateId={templateId} />;
 }
